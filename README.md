@@ -1,6 +1,6 @@
 # home-heat-calculator
 
-A frontend-only calculator for estimating home heating needs per room.
+A React frontend-only calculator for estimating home heating needs per room.
 
 ## Features
 
