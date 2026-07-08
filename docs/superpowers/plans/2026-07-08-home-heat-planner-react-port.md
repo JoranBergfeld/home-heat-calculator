@@ -56,8 +56,7 @@ Replace the old form-based app (deleted in the working tree, still in git histor
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.3",
     "vite": "^8.1.3",
-    "vitest": "^4.1.10",
-    "jsdom": "^25.0.1"
+    "vitest": "^4.1.10"
   }
 }
 ```
@@ -72,9 +71,12 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'node',
+    setupFiles: './vitest.setup.js',
   },
 })
 ```
+
+Note: `vitest.setup.js` (a tiny in-memory `localStorage` polyfill) is created in Task 7, where the storage tests need it. Wiring `setupFiles` here in Task 1 keeps the config in one place. Node 22+/26 ships an experimental `globalThis.localStorage` that needs a `--localstorage-file` flag and collides with jsdom, so we skip jsdom for tests entirely and use the polyfill.
 
 - [ ] **Step 3: Write `index.html`**
 
@@ -767,12 +769,36 @@ Load/save `heatsim-v1`, plus pure `serialize`/`parseImport` for export/import, a
   - `parseImport(text) -> state | null` (normalized full state, or null on invalid).
   - `downloadJson(filename, text) -> void`.
 
-- [ ] **Step 1: Write the failing test `src/lib/storage.test.js`** (jsdom for localStorage)
+- [ ] **Step 0: Add an in-memory `localStorage` polyfill for tests**
 
-Add `// @vitest-environment jsdom` at the top so `localStorage` exists.
+Node 22+ ships an experimental `globalThis.localStorage` that needs a runtime flag and collides with jsdom, so tests run in the plain `node` environment with a tiny polyfill instead. Create `vitest.setup.js` (already wired via `setupFiles` in `vite.config.js` from Task 1):
 
 ```js
-// @vitest-environment jsdom
+// Minimal in-memory localStorage for the node test environment.
+class MemoryStorage {
+  constructor() {
+    this.store = new Map()
+  }
+  getItem(k) {
+    return this.store.has(k) ? this.store.get(k) : null
+  }
+  setItem(k, v) {
+    this.store.set(k, String(v))
+  }
+  removeItem(k) {
+    this.store.delete(k)
+  }
+  clear() {
+    this.store.clear()
+  }
+}
+
+globalThis.localStorage = new MemoryStorage()
+```
+
+- [ ] **Step 1: Write the failing test `src/lib/storage.test.js`**
+
+```js
 import { afterEach, describe, expect, it } from 'vitest'
 import { STORAGE_KEY, load, save, serialize, parseImport } from './storage.js'
 import { defaultState } from './defaultState.js'
