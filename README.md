@@ -81,3 +81,18 @@ Single state tree: `{ floors: [{id, name, rooms: [{id, name, x, y, w, h, insulat
 
 - `Home Heat Planner.dc.html` — the entire prototype (markup template + `Component` logic class with solver, geometry, and interaction code).
 - `support.js` — prototype runtime (loads the template + class; not part of the reimplementation).
+
+## Running the app
+
+The React port lives in `src/` (Vite + React 19).
+
+```bash
+npm install
+npm run dev      # start the Vite dev server (http://localhost:5173)
+npm test         # run the Vitest unit tests (solver, geometry, storage, derive)
+npm run build    # production build
+```
+
+Structure: pure logic in `src/lib/` (`solve`, `geometry`, `color`, `derive`, `storage`, `constants`, `defaultState`), state in `src/hooks/useHeatPlanner.js`, and presentational components in `src/components/` (`Header`, `Canvas`, `Room`, `Stairs`, `Inspector`, `Footer`).
+
+State persists to `localStorage` under `heatsim-v1`. The header's Export / Import buttons move a plan as JSON, and Reset restores the default house. The Grid and Heat/Status toggles switch the 1 m grid and the heatmap-vs-status coloring.
