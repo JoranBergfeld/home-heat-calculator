@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
 import { STORAGE_KEY, load, save, serialize, parseImport } from './storage.js'
 import { defaultState } from './defaultState.js'
