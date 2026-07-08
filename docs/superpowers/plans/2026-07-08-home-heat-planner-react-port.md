@@ -694,7 +694,7 @@ describe('derive', () => {
     const d = derive(s.floors, temps, 21)
     expect(d.total).toBe(9)
     expect(d.okCount + d.coldRooms.length).toBe(9)
-    expect(d.totalKw).toBeCloseTo(7.8, 1) // 2+1.2+0.8+1 + 1.2+1+0.8
+    expect(d.totalKw).toBeCloseTo(8.0, 1) // ground 2+1.2+0.8+1=5.0 + upper 1.2+1+0.8=3.0
     expect(typeof d.allOk).toBe('boolean')
     if (d.coldRooms.length) {
       expect(d.coldRooms[0].needStr.startsWith('+')).toBe(true)
