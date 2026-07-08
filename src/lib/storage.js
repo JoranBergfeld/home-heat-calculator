@@ -6,7 +6,7 @@ function normalize(s) {
   if (!s || !Array.isArray(s.floors) || !s.floors.length) return null
   return {
     floors: s.floors.map((f) => ({ ...f, rooms: f.rooms || [], stairs: f.stairs || [] })),
-    activeFloor: Math.min(s.activeFloor || 0, s.floors.length - 1),
+    activeFloor: Math.max(0, Math.min(s.activeFloor || 0, s.floors.length - 1)),
     selected: null,
     outsideTemp: typeof s.outsideTemp === 'number' ? s.outsideTemp : 0,
     comfort: typeof s.comfort === 'number' ? s.comfort : 21,

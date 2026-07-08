@@ -35,4 +35,11 @@ describe('storage', () => {
     expect(parseImport('{"foo":1}')).toBe(null)
     expect(parseImport('not json')).toBe(null)
   })
+
+  it('clamps a negative activeFloor to 0', () => {
+    const s = defaultState()
+    s.activeFloor = -3
+    save(s)
+    expect(load().activeFloor).toBe(0)
+  })
 })
