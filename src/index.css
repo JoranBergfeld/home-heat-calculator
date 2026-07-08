@@ -1,0 +1,18 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #edeff2;
+}
+* {
+  box-sizing: border-box;
+}
+a {
+  color: #2b5fc7;
+}
+a:hover {
+  color: #1c439a;
+}
+input[type='range'] {
+  accent-color: #2b5fc7;
+}

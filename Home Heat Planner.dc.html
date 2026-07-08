@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#edeff2}
+  *{box-sizing:border-box}
+  a{color:#2b5fc7}a:hover{color:#1c439a}
+  input[type="range"]{accent-color:#2b5fc7}
+</style>
+</helmet>
+<div style="height:100vh;display:flex;flex-direction:column;font-family:'IBM Plex Sans',sans-serif;color:#1b2330;background:#edeff2;overflow:hidden" data-screen-label="Home Heat Planner">
+
+  <header style="display:flex;align-items:center;gap:18px;padding:10px 20px;background:#ffffff;border-bottom:1px solid #dde1e7;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column">
+      <div style="font-size:16px;font-weight:700;letter-spacing:-0.01em">Home Heat Planner</div>
+      <div style="font-size:11px;color:#68758a">will your house stay warm?</div>
+    </div>
+    <div style="width:1px;height:30px;background:#e3e7ed"></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <sc-for list="{{floorTabs}}" as="f" hint-placeholder-count="2">
+        <div onClick="{{f.onClick}}" style="display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:6px;background:{{f.bg}};color:{{f.color}};border:1px solid {{f.bc}};font-size:12.5px;font-weight:600;cursor:pointer;user-select:none">
+          <span>{{f.name}}</span>
+          <sc-if value="{{f.closable}}" hint-placeholder-val="{{false}}">
+            <span onClick="{{f.onClose}}" style="opacity:0.55;font-size:13px;line-height:1;cursor:pointer" style-hover="opacity:1">×</span>
+          </sc-if>
+        </div>
+      </sc-for>
+      <button onClick="{{addFloor}}" style="padding:6px 10px;border-radius:6px;background:#fff;border:1px dashed #c3cad4;color:#4a5568;font-size:12px;font-weight:600;cursor:pointer" style-hover="border-color:#2b5fc7;color:#2b5fc7">+ Floor</button>
+      <button onClick="{{addRoom}}" style="padding:6px 10px;border-radius:6px;background:#2b5fc7;border:1px solid #2b5fc7;color:#fff;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:#2451ab">+ Room</button>
+      <button onClick="{{addStairs}}" style="padding:6px 10px;border-radius:6px;background:#fff;border:1px dashed #c3cad4;color:#4a5568;font-size:12px;font-weight:600;cursor:pointer" style-hover="border-color:#2b5fc7;color:#2b5fc7">+ Stairs</button>
+      <div style="display:flex;border:1px solid #dde1e7;border-radius:6px;overflow:hidden">
+        <sc-for list="{{viewBtns}}" as="v" hint-placeholder-count="2">
+          <button onClick="{{v.onClick}}" style="padding:6px 10px;border:none;background:{{v.bg}};color:{{v.color}};font-size:12px;font-weight:600;cursor:pointer">{{v.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:10.5px;color:#68758a;font-weight:700;letter-spacing:0.06em">OUTSIDE</span>
+      <div style="display:flex;gap:4px">
+        <sc-for list="{{presets}}" as="p" hint-placeholder-count="3">
+          <button onClick="{{p.onClick}}" style="padding:4px 8px;border-radius:5px;background:{{p.bg}};border:1px solid {{p.bc}};color:{{p.color}};font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer">{{p.label}}</button>
+        </sc-for>
+      </div>
+      <input type="range" min="-20" max="25" step="1" value="{{ui.outsideTemp}}" onChange="{{onOutside}}" style="width:120px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;min-width:44px">{{outsideStr}}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:10.5px;color:#68758a;font-weight:700;letter-spacing:0.06em">TARGET</span>
+      <input type="range" min="16" max="25" step="0.5" value="{{ui.comfort}}" onChange="{{onComfort}}" style="width:80px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;min-width:38px">{{comfortStr}}</span>
+    </div>
+    <div style="padding:6px 12px;border-radius:6px;background:{{sum.bg}};color:{{sum.color}};font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600">{{sum.text}}</div>
+  </header>
+
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="flex:1;overflow:auto;padding:24px;display:grid;place-items:center" onMouseDown="{{deselect}}">
+      <div onMouseDown="{{deselect}}" data-screen-label="Floor canvas" style="position:relative;width:884px;height:572px;flex:none;background:#fbfcfe;border:1px solid #d3d8e0;border-radius:8px;box-shadow:0 1px 3px rgba(20,30,50,0.06);transform:{{worldXform}};transform-style:preserve-3d;transition:transform 0.6s ease">
+        <div style="position:absolute;inset:0;pointer-events:none;border-radius:8px;opacity:{{gridOpacity}};background-image:repeating-linear-gradient(0deg,#e8ecf1 0px,#e8ecf1 1px,transparent 1px,transparent 52px),repeating-linear-gradient(90deg,#e8ecf1 0px,#e8ecf1 1px,transparent 1px,transparent 52px)"></div>
+        <sc-for list="{{rooms}}" as="r" hint-placeholder-count="4">
+          <div onMouseDown="{{r.onDown}}" data-screen-label="Room" style="position:absolute;left:{{r.left}}px;top:{{r.top}}px;width:{{r.width}}px;height:{{r.height}}px;background:{{r.fill}};border:{{r.border}};box-shadow:{{r.shadow}};border-radius:4px;cursor:move;user-select:none;transform-style:preserve-3d">
+            <sc-for list="{{r.walls}}" as="w" hint-placeholder-count="1">
+              <div style="position:absolute;left:{{w.left}}px;top:{{w.top}}px;width:{{w.width}}px;height:{{w.height}}px;transform-origin:{{w.origin}};transform:{{w.xform}};background:{{w.bg}};border:1px solid {{w.bc}};pointer-events:none">
+                <sc-for list="{{w.openings}}" as="o" hint-placeholder-count="1">
+                  <div style="position:absolute;left:{{o.l}}px;top:{{o.t}}px;width:{{o.w}}px;height:{{o.h}}px;background:{{o.bg}};border:{{o.border}}"></div>
+                </sc-for>
+              </div>
+            </sc-for>
+            <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) {{labelXform}};background:{{labelBg}};border-radius:5px;padding:2px 8px;display:flex;flex-direction:column;align-items:center;gap:1px;pointer-events:none;max-width:95%;overflow:hidden">
+              <div style="font-size:12px;font-weight:600;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.name}}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600">{{r.tempStr}}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#3a4657;opacity:0.85;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.srcStr}}</div>
+            </div>
+            <sc-if value="{{r.selected}}" hint-placeholder-val="{{false}}">
+              <div onMouseDown="{{r.onResizeDown}}" style="position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;background:#2b5fc7;border-radius:4px 0 3px 0;cursor:nwse-resize"></div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-for list="{{stairsV}}" as="sr" hint-placeholder-count="1">
+          <div onMouseDown="{{sr.onDown}}" data-screen-label="Stairs" style="position:absolute;left:{{sr.left}}px;top:{{sr.top}}px;width:{{sr.width}}px;height:{{sr.height}}px;background:{{sr.bg}};border:{{sr.border}};box-shadow:{{sr.shadow}};border-radius:3px;cursor:move;user-select:none;transform:{{sr.lift}}">
+            <sc-if value="{{sr.selected}}" hint-placeholder-val="{{false}}">
+              <div onMouseDown="{{sr.onResizeDown}}" style="position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;background:#2b5fc7;border-radius:3px 0 3px 0;cursor:nwse-resize"></div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <aside style="width:300px;flex:none;background:#ffffff;border-left:1px solid #dde1e7;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:16px" data-screen-label="Inspector">
+      <sc-if value="{{hasSel}}" hint-placeholder-val="{{false}}">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <input value="{{sel.name}}" onChange="{{sel.onName}}" style="font-family:inherit;font-size:15px;font-weight:700;border:none;border-bottom:1px solid #dde1e7;padding:4px 2px;outline:none;background:transparent;width:100%;color:inherit">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#68758a">{{sel.dims}}</div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:10px;padding:12px 14px;border-radius:8px;background:#f4f6f9;border:1px solid #e3e7ed">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:{{sel.tempColor}}">{{sel.tempStr}}</span>
+          <span style="font-size:12px;font-weight:600;color:{{sel.statusColor}}">{{sel.statusText}}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:10.5px;color:#68758a;font-weight:700;letter-spacing:0.06em">INSULATION</div>
+          <div style="display:flex;gap:6px">
+            <sc-for list="{{insBtns}}" as="b" hint-placeholder-count="3">
+              <button onClick="{{b.onClick}}" style="flex:1;padding:7px 0;border-radius:6px;background:{{b.bg}};color:{{b.color}};border:1px solid {{b.bc}};font-size:12px;font-weight:600;cursor:pointer">{{b.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:10.5px;color:#68758a;font-weight:700;letter-spacing:0.06em">WINDOWS</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onClick="{{onWinMinus}}" style="width:26px;height:26px;border-radius:6px;border:1px solid #dde1e7;background:#fff;font-size:14px;cursor:pointer;color:#3a4657">−</button>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;min-width:16px;text-align:center">{{selWin}}</span>
+            <button onClick="{{onWinPlus}}" style="width:26px;height:26px;border-radius:6px;border:1px solid #dde1e7;background:#fff;font-size:14px;cursor:pointer;color:#3a4657">+</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:10.5px;color:#68758a;font-weight:700;letter-spacing:0.06em">HEAT SOURCES</div>
+          <sc-if value="{{selNoSources}}" hint-placeholder-val="{{false}}">
+            <div style="font-size:12px;color:#98a2b3;padding:8px 0">No heat source yet — add one below.</div>
+          </sc-if>
+          <sc-for list="{{selSources}}" as="s" hint-placeholder-count="1">
+            <div style="border:1px solid #e3e7ed;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:12.5px;font-weight:600">{{s.label}}</span>
+                <span onClick="{{s.onRemove}}" style="cursor:pointer;color:#98a2b3;font-size:15px;line-height:1" style-hover="color:#d64545">×</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="range" min="{{s.min}}" max="{{s.max}}" step="0.1" value="{{s.val}}" onChange="{{s.onChange}}" style="flex:1">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;min-width:52px;text-align:right">{{s.valStr}} kW</span>
+              </div>
+            </div>
+          </sc-for>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{addBtns}}" as="b" hint-placeholder-count="5">
+              <button onClick="{{b.onClick}}" style="padding:5px 9px;border-radius:6px;border:1px dashed #c3cad4;background:#fff;color:#4a5568;font-size:11.5px;font-weight:600;cursor:pointer" style-hover="border-color:#2b5fc7;color:#2b5fc7">+ {{b.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+        <button onClick="{{deleteRoom}}" style="padding:8px 0;border-radius:6px;border:1px solid #f0d4d4;background:#fff;color:#c04747;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:#fbf1f1">Delete room</button>
+      </sc-if>
+      <sc-if value="{{hasStairSel}}" hint-placeholder-val="{{false}}">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:15px;font-weight:700">Staircase</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#68758a">{{stairDims}}</div>
+        </div>
+        <div style="font-size:12.5px;color:#4a5568;line-height:1.6;padding:10px 12px;border-radius:8px;background:#f4f6f9;border:1px solid #e3e7ed">{{stairInfo}}</div>
+        <div style="flex:1"></div>
+        <button onClick="{{deleteStair}}" style="padding:8px 0;border-radius:6px;border:1px solid #f0d4d4;background:#fff;color:#c04747;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:#fbf1f1">Delete stairs</button>
+      </sc-if>
+      <sc-if value="{{noSel}}" hint-placeholder-val="{{true}}">
+        <div style="font-size:14px;font-weight:700">House overview</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between"><span style="color:#68758a">Rooms</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:600">{{houseRooms}}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:#68758a">Installed heating</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:600">{{housePower}}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:#68758a">Rooms at target</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:600">{{houseOk}}</span></div>
+        </div>
+        <sc-if value="{{hasCold}}" hint-placeholder-val="{{false}}">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:10.5px;color:#68758a;font-weight:700;letter-spacing:0.06em">NEEDS MORE HEAT</div>
+            <sc-for list="{{coldRooms}}" as="c" hint-placeholder-count="2">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;padding:6px 8px;border-radius:6px;background:#f4f6f9">
+                <span style="font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.name}} <span style="color:#98a2b3;font-weight:400">{{c.floorName}}</span></span>
+                <span style="font-family:'IBM Plex Mono',monospace;color:#3f6fd0">{{c.tempStr}}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;color:#68758a">{{c.needStr}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{allWarm}}" hint-placeholder-val="{{false}}">
+          <div style="font-size:12.5px;color:#3d7a55;font-weight:600;padding:8px 10px;border-radius:6px;background:oklch(0.95 0.03 150)">Every room reaches the target temperature.</div>
+        </sc-if>
+        <div style="flex:1"></div>
+        <div style="font-size:11.5px;color:#98a2b3;line-height:1.6">Click a room to edit its insulation, windows and heat sources. Drag rooms to move them; drag the blue corner to resize. Rooms that share a wall exchange heat, and floors leak heat to the level above.</div>
+      </sc-if>
+    </aside>
+  </div>
+
+  <footer style="display:flex;align-items:center;gap:12px;padding:8px 20px;background:#fff;border-top:1px solid #dde1e7;font-size:11px;color:#68758a">
+    <span style="font-weight:700;letter-spacing:0.06em;font-size:10.5px">ROOM °C</span>
+    <span style="font-family:'IBM Plex Mono',monospace">10°</span>
+    <div style="width:220px;height:10px;border-radius:5px;background:linear-gradient(90deg, oklch(0.73 0.13 245), oklch(0.73 0.13 190) 28%, oklch(0.75 0.13 140) 47%, oklch(0.78 0.13 90) 63%, oklch(0.72 0.15 55) 82%, oklch(0.65 0.18 25))"></div>
+    <span style="font-family:'IBM Plex Mono',monospace">28°+</span>
+    <div style="width:1px;height:16px;background:#e3e7ed"></div>
+    <div style="display:flex;align-items:center;gap:5px"><div style="width:14px;height:10px;background:rgba(163,199,236,0.88);border:1.5px solid #64789a;border-radius:2px"></div><span>window</span></div>
+    <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:12px;background:#b98e5e;border:1.5px solid #8f6a42;border-radius:2px"></div><span>door</span></div>
+    <div style="width:1px;height:16px;background:#e3e7ed"></div>
+    <span>Steady-state temperatures with heaters at set output — tune powers and outside temperature to test your setup.</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;showGrid&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Canvas&quot;},&quot;heatView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;heatmap&quot;,&quot;status&quot;],&quot;default&quot;:&quot;heatmap&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Display&quot;}}">
+class Component extends DCLogic {
+  SCALE = 52; CW = 17; CH = 11;
+  INS = {
+    poor:    { u: 1.8,  ach: 0.9,  label: 'Poor' },
+    average: { u: 1.0,  ach: 0.6,  label: 'Average' },
+    good:    { u: 0.45, ach: 0.35, label: 'Good' }
+  };
+  SRC = {
+    underfloor: { label: 'Underfloor',  abbr: 'UF',  min: 0.2, max: 3,   def: 1.2 },
+    radiator:   { label: 'Radiator',    abbr: 'RAD', min: 0.2, max: 3.5, def: 1.5 },
+    electric:   { label: 'Electric',    abbr: 'EL',  min: 0.2, max: 2.5, def: 1.0 },
+    heatpump:   { label: 'Heat pump',   abbr: 'HP',  min: 0.5, max: 5,   def: 2.5 },
+    stove:      { label: 'Wood stove',  abbr: 'ST',  min: 1,   max: 8,   def: 4 }
+  };
+
+  state = this.loadInitial();
+
+  defaultState() {
+    return {
+      floors: [
+        { id: 'g', name: 'Ground floor', rooms: [
+          { id: 'r1', name: 'Living room', x: 1, y: 1, w: 6, h: 4.5, insulation: 'average', windows: 3, sources: [{ id: 's1', type: 'radiator', power: 2 }] },
+          { id: 'r2', name: 'Kitchen', x: 7, y: 1, w: 4, h: 4.5, insulation: 'average', windows: 2, sources: [{ id: 's2', type: 'underfloor', power: 1.2 }] },
+          { id: 'r3', name: 'Hall', x: 1, y: 5.5, w: 3, h: 3, insulation: 'average', windows: 1, sources: [] },
+          { id: 'r4', name: 'Bathroom', x: 4, y: 5.5, w: 3, h: 3, insulation: 'average', windows: 1, sources: [{ id: 's3', type: 'electric', power: 0.8 }] },
+          { id: 'r5', name: 'Office', x: 7, y: 5.5, w: 4, h: 3, insulation: 'average', windows: 2, sources: [{ id: 's4', type: 'radiator', power: 1 }] }
+        ], stairs: [{ id: 'st1', x: 1.3, y: 5.9, w: 1, h: 2.4 }] },
+        { id: 'u', name: 'Floor 1', rooms: [
+          { id: 'r6', name: 'Bedroom 1', x: 1, y: 1, w: 5, h: 4, insulation: 'average', windows: 2, sources: [{ id: 's5', type: 'radiator', power: 1.2 }] },
+          { id: 'r7', name: 'Bedroom 2', x: 6, y: 1, w: 5, h: 4, insulation: 'average', windows: 2, sources: [{ id: 's6', type: 'radiator', power: 1 }] },
+          { id: 'r8', name: 'Bathroom', x: 4, y: 5, w: 3, h: 3, insulation: 'average', windows: 1, sources: [{ id: 's7', type: 'underfloor', power: 0.8 }] },
+          { id: 'r9', name: 'Landing', x: 1, y: 5, w: 3, h: 3, insulation: 'average', windows: 0, sources: [] }
+        ], stairs: [] }
+      ],
+      activeFloor: 0, selected: null, outsideTemp: 0, comfort: 21, view: '3d'
+    };
+  }
+
+  loadInitial() {
+    try {
+      const raw = localStorage.getItem('heatsim-v1');
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && Array.isArray(s.floors) && s.floors.length) {
+          return {
+            floors: s.floors.map(f => ({ ...f, rooms: f.rooms || [], stairs: f.stairs || [] })),
+            activeFloor: Math.min(s.activeFloor || 0, s.floors.length - 1),
+            selected: null,
+            outsideTemp: typeof s.outsideTemp === 'number' ? s.outsideTemp : 0,
+            comfort: typeof s.comfort === 'number' ? s.comfort : 21,
+            view: s.view === '2d' ? '2d' : '3d'
+          };
+        }
+      }
+    } catch (e) {}
+    return this.defaultState();
+  }
+
+  componentDidMount() {
+    this._mv = (e) => this.onMove(e);
+    this._up = () => { this._drag = null; };
+    document.addEventListener('mousemove', this._mv);
+    document.addEventListener('mouseup', this._up);
+  }
+  componentWillUnmount() {
+    document.removeEventListener('mousemove', this._mv);
+    document.removeEventListener('mouseup', this._up);
+    clearTimeout(this._sv);
+  }
+  componentDidUpdate() {
+    clearTimeout(this._sv);
+    this._sv = setTimeout(() => {
+      const s = this.state;
+      try {
+        localStorage.setItem('heatsim-v1', JSON.stringify({
+          floors: s.floors, activeFloor: s.activeFloor, outsideTemp: s.outsideTemp, comfort: s.comfort, view: s.view
+        }));
+      } catch (e) {}
+    }, 300);
+  }
+
+  uid() { return Math.random().toString(36).slice(2, 9); }
+  ov(a0, aw, b0, bw) { return Math.max(0, Math.min(a0 + aw, b0 + bw) - Math.max(a0, b0)); }
+
+  updateRoom(id, patch) {
+    this.setState(s => ({
+      floors: s.floors.map(f => ({
+        ...f,
+        rooms: f.rooms.map(r => r.id === id ? { ...r, ...(typeof patch === 'function' ? patch(r) : patch) } : r)
+      }))
+    }));
+  }
+
+  startDrag(e, rm, mode, kind) {
+    e.stopPropagation(); e.preventDefault();
+    this.setState({ selected: rm.id });
+    this._drag = { mode, kind: kind || 'room', id: rm.id, sx: e.clientX, sy: e.clientY, ox: rm.x, oy: rm.y, w: rm.w, h: rm.h, ow: rm.w, oh: rm.h, rx: rm.x, ry: rm.y };
+  }
+
+  updateStair(id, patch) {
+    this.setState(s => ({
+      floors: s.floors.map(f => ({
+        ...f,
+        stairs: (f.stairs || []).map(t => t.id === id ? { ...t, ...patch } : t)
+      }))
+    }));
+  }
+
+  addStairs() {
+    this.setState(s => {
+      const fi = Math.min(s.activeFloor, s.floors.length - 1);
+      const t = { id: this.uid(), x: 7, y: 4, w: 1, h: 2.5 };
+      return { floors: s.floors.map((fl, i) => i === fi ? { ...fl, stairs: [...(fl.stairs || []), t] } : fl), selected: t.id };
+    });
+  }
+
+  onMove(e) {
+    const d = this._drag; if (!d) return;
+    e.preventDefault();
+    const q = v => Math.round(v * 4) / 4;
+    const pdx = e.clientX - d.sx, pdy = e.clientY - d.sy;
+    let dx, dy;
+    if (this.state.view !== '2d') {
+      const K = 0.82, C = Math.SQRT1_2, CA = Math.cos(55 * Math.PI / 180);
+      const A = pdx / K / C, B = pdy / K / (C * CA);
+      dx = (A - B) / 2 / this.SCALE;
+      dy = (A + B) / 2 / this.SCALE;
+    } else {
+      dx = pdx / this.SCALE; dy = pdy / this.SCALE;
+    }
+    const upd = (p) => d.kind === 'stair' ? this.updateStair(d.id, p) : this.updateRoom(d.id, p);
+    const minSz = d.kind === 'stair' ? 0.7 : 1.5;
+    if (d.mode === 'move') {
+      const nx = Math.min(Math.max(q(d.ox + dx), 0), this.CW - d.w);
+      const ny = Math.min(Math.max(q(d.oy + dy), 0), this.CH - d.h);
+      upd({ x: nx, y: ny });
+    } else {
+      const nw = Math.min(Math.max(q(d.ow + dx), minSz), this.CW - d.rx);
+      const nh = Math.min(Math.max(q(d.oh + dy), minSz), this.CH - d.ry);
+      upd({ w: nw, h: nh });
+    }
+  }
+
+  solve() {
+    const { floors, outsideTemp: Tout } = this.state;
+    const H = 2.5;
+    const nodes = [];
+    floors.forEach((f, fi) => f.rooms.forEach(r => nodes.push({ r, fi })));
+    const n = nodes.length;
+    const res = new Map();
+    if (!n) return res;
+    const pairs = [];
+    const shared = new Array(n).fill(0);
+    const coverAbove = new Array(n).fill(0), coverBelow = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const A = nodes[i], B = nodes[j], a = A.r, b = B.r;
+      if (A.fi === B.fi) {
+        let len = 0;
+        if (Math.abs((a.x + a.w) - b.x) < 0.13 || Math.abs((b.x + b.w) - a.x) < 0.13) len = this.ov(a.y, a.h, b.y, b.h);
+        if (Math.abs((a.y + a.h) - b.y) < 0.13 || Math.abs((b.y + b.h) - a.y) < 0.13) len = Math.max(len, this.ov(a.x, a.w, b.x, b.w));
+        if (len > 0.3) { pairs.push({ i, j, G: len * H * 2.0 }); shared[i] += len; shared[j] += len; }
+      } else if (Math.abs(A.fi - B.fi) === 1) {
+        const ar = this.ov(a.x, a.w, b.x, b.w) * this.ov(a.y, a.h, b.y, b.h);
+        if (ar > 0.3) {
+          pairs.push({ i, j, G: ar * 1.5 });
+          if (A.fi < B.fi) { coverAbove[i] += ar; coverBelow[j] += ar; }
+          else { coverAbove[j] += ar; coverBelow[i] += ar; }
+        }
+      }
+    }
+    const Gout = [], Ggnd = [], Q = [];
+    nodes.forEach((N, i) => {
+      const r = N.r;
+      const ins = this.INS[r.insulation] || this.INS.average;
+      const area = r.w * r.h, vol = area * H, perim = 2 * (r.w + r.h);
+      const extLen = Math.max(0, perim - shared[i]);
+      const winA = Math.min((r.windows || 0) * 1.6, extLen * H * 0.8);
+      let g = Math.max(0, extLen * H - winA) * ins.u + winA * 2.6 + 0.33 * ins.ach * vol;
+      g += Math.max(0, area - coverAbove[i]) * ins.u * 0.85;
+      let gg = 0;
+      if (N.fi === 0) gg = area * 0.4;
+      else g += Math.max(0, area - coverBelow[i]) * 0.6;
+      Gout[i] = g; Ggnd[i] = gg;
+      Q[i] = (r.sources || []).reduce((s, x) => s + x.power, 0) * 1000;
+    });
+    const idx = new Map();
+    nodes.forEach((N, i) => idx.set(N.r.id, i));
+    floors.forEach((f, fi) => {
+      if (fi >= floors.length - 1) return;
+      (f.stairs || []).forEach(t => {
+        const below = [], above = [];
+        floors[fi].rooms.forEach(r => {
+          const a = this.ov(t.x, t.w, r.x, r.w) * this.ov(t.y, t.h, r.y, r.h);
+          if (a > 0.2) below.push([idx.get(r.id), a]);
+        });
+        floors[fi + 1].rooms.forEach(r => {
+          const a = this.ov(t.x, t.w, r.x, r.w) * this.ov(t.y, t.h, r.y, r.h);
+          if (a > 0.2) above.push([idx.get(r.id), a]);
+        });
+        below.forEach(([i, a]) => above.forEach(([j, b]) => pairs.push({ i, j, G: Math.min(a, b) * 12 })));
+      });
+    });
+    const adj = Array.from({ length: n }, () => []);
+    pairs.forEach(p => { adj[p.i].push([p.j, p.G]); adj[p.j].push([p.i, p.G]); });
+    const T = new Array(n).fill(Math.max(Tout, 12));
+    for (let it = 0; it < 200; it++) {
+      for (let i = 0; i < n; i++) {
+        let num = Q[i] + Gout[i] * Tout + Ggnd[i] * 10;
+        let den = Gout[i] + Ggnd[i];
+        for (const [j, G] of adj[i]) { num += G * T[j]; den += G; }
+        T[i] = num / den;
+      }
+    }
+    nodes.forEach((N, i) => {
+      let den = Gout[i] + Ggnd[i];
+      for (const [j, G] of adj[i]) den += G;
+      res.set(N.r.id, { t: T[i], G: den });
+    });
+    return res;
+  }
+
+  wallsFor(rm, others) {
+    const S = this.SCALE, WH = 2.5 * S, eps = 0.13, ins = 1.5;
+    const sh = { n: [], s: [], w: [], e: [] };
+    others.forEach(b => {
+      let s0, s1;
+      if (Math.abs(b.y + b.h - rm.y) < eps) { s0 = Math.max(rm.x, b.x) - rm.x; s1 = Math.min(rm.x + rm.w, b.x + b.w) - rm.x; if (s1 - s0 > 0.3) sh.n.push({ s: s0, e: s1 }); }
+      if (Math.abs(b.y - (rm.y + rm.h)) < eps) { s0 = Math.max(rm.x, b.x) - rm.x; s1 = Math.min(rm.x + rm.w, b.x + b.w) - rm.x; if (s1 - s0 > 0.3) sh.s.push({ s: s0, e: s1 }); }
+      if (Math.abs(b.x + b.w - rm.x) < eps) { s0 = Math.max(rm.y, b.y) - rm.y; s1 = Math.min(rm.y + rm.h, b.y + b.h) - rm.y; if (s1 - s0 > 0.3) sh.w.push({ s: s0, e: s1 }); }
+      if (Math.abs(b.x - (rm.x + rm.w)) < eps) { s0 = Math.max(rm.y, b.y) - rm.y; s1 = Math.min(rm.y + rm.h, b.y + b.h) - rm.y; if (s1 - s0 > 0.3) sh.e.push({ s: s0, e: s1 }); }
+    });
+    const freeOf = (L, list) => {
+      const a = [...list].sort((p, q) => p.s - q.s); const out = []; let cur = 0;
+      a.forEach(iv => { if (iv.s - cur > 0.05) out.push({ s: cur, e: Math.min(iv.s, L) }); cur = Math.max(cur, iv.e); });
+      if (L - cur > 0.05) out.push({ s: cur, e: L });
+      return out;
+    };
+    const sides = [{ k: 'n', L: rm.w }, { k: 's', L: rm.w }, { k: 'w', L: rm.h }, { k: 'e', L: rm.h }];
+    const open = { n: [], s: [], w: [], e: [] };
+    sides.forEach(sd => sh[sd.k].forEach(iv => {
+      if (iv.e - iv.s >= 0.95) { const c = (iv.s + iv.e) / 2; open[sd.k].push({ p0: c - 0.45, p1: c + 0.45, h0: 0, h1: 2.05, door: true }); }
+    }));
+    const frees = [];
+    sides.forEach(sd => freeOf(sd.L, sh[sd.k]).forEach(f => { if (f.e - f.s >= 1.4) frees.push({ k: sd.k, s: f.s, e: f.e }); }));
+    const nWin = rm.windows || 0;
+    if (nWin && frees.length) {
+      const per = new Array(frees.length).fill(0);
+      for (let i = 0; i < nWin; i++) per[i % frees.length]++;
+      frees.forEach((f, i) => {
+        const cnt = Math.min(per[i], Math.floor((f.e - f.s) / 1.4));
+        for (let j = 0; j < cnt; j++) {
+          const c = f.s + (f.e - f.s) * (j + 1) / (cnt + 1);
+          open[f.k].push({ p0: c - 0.6, p1: c + 0.6, h0: 0.9, h1: 2.1, door: false });
+        }
+      });
+    }
+    const geo = {
+      n: { left: 0, top: ins, width: rm.w * S, height: WH, origin: '50% 0', front: false, horiz: true },
+      s: { left: 0, top: rm.h * S - ins, width: rm.w * S, height: WH, origin: '50% 0', front: true, horiz: true },
+      w: { left: ins, top: 0, width: WH, height: rm.h * S, origin: '0 50%', front: true, horiz: false },
+      e: { left: rm.w * S - ins, top: 0, width: WH, height: rm.h * S, origin: '0 50%', front: false, horiz: false }
+    };
+    return sides.map(sd => {
+      const g = geo[sd.k];
+      const openings = open[sd.k].map(o => {
+        const rect = g.horiz
+          ? { l: o.p0 * S, t: o.h0 * S, w: (o.p1 - o.p0) * S, h: (o.h1 - o.h0) * S }
+          : { l: o.h0 * S, t: o.p0 * S, w: (o.h1 - o.h0) * S, h: (o.p1 - o.p0) * S };
+        return { ...rect, bg: o.door ? '#b98e5e' : 'rgba(163,199,236,0.88)', border: o.door ? '1.5px solid #8f6a42' : '1.5px solid #64789a' };
+      });
+      return {
+        left: g.left, top: g.top, width: g.width, height: g.height, origin: g.origin,
+        xform: g.horiz ? 'rotateX(90deg)' : 'rotateY(-90deg)',
+        bg: g.front ? 'rgba(206,213,224,0.22)' : '#d9dee8',
+        bc: g.front ? 'rgba(150,160,178,0.45)' : '#bfc7d3',
+        openings
+      };
+    });
+  }
+
+  tempColor(t, a, dark) {
+    const f = Math.min(1, Math.max(0, (t - 10) / 18));
+    const hue = (245 - f * 220).toFixed(0);
+    return 'oklch(' + (dark ? 0.5 : 0.73) + ' 0.13 ' + hue + ' / ' + a + ')';
+  }
+
+  addRoom() {
+    this.setState(s => {
+      const fi = Math.min(s.activeFloor, s.floors.length - 1);
+      const f = s.floors[fi];
+      const w = 3, h = 3;
+      let px = 0.5, py = 0.5;
+      outer:
+      for (let y = 0; y <= this.CH - h; y += 0.5) for (let x = 0; x <= this.CW - w; x += 0.5) {
+        const clash = f.rooms.some(r => this.ov(x, w, r.x, r.w) > 0.01 && this.ov(y, h, r.y, r.h) > 0.01);
+        if (!clash) { px = x; py = y; break outer; }
+      }
+      const room = { id: this.uid(), name: 'Room ' + (f.rooms.length + 1), x: px, y: py, w, h, insulation: 'average', windows: 1, sources: [] };
+      return { floors: s.floors.map((fl, i) => i === fi ? { ...fl, rooms: [...fl.rooms, room] } : fl), selected: room.id };
+    });
+  }
+
+  addFloor() {
+    this.setState(s => ({
+      floors: [...s.floors, { id: this.uid(), name: 'Floor ' + s.floors.length, rooms: [] }],
+      activeFloor: s.floors.length, selected: null
+    }));
+  }
+
+  removeFloor(i) {
+    this.setState(s => {
+      if (s.floors.length <= 1) return null;
+      const floors = s.floors.filter((_, x) => x !== i);
+      return { floors, activeFloor: Math.min(s.activeFloor, floors.length - 1), selected: null };
+    });
+  }
+
+  renderVals() {
+    const st = this.state;
+    const fi = Math.min(st.activeFloor, st.floors.length - 1);
+    const floor = st.floors[fi] || { rooms: [] };
+    const temps = this.solve();
+    const comfort = st.comfort;
+    const heatView = this.props.heatView ?? 'heatmap';
+    const S = this.SCALE;
+    const sel = floor.rooms.find(r => r.id === st.selected) || null;
+    const view = st.view === '2d' ? '2d' : '3d';
+    const is3 = view === '3d';
+
+    const rooms = floor.rooms.map(rm => {
+      const inf = temps.get(rm.id) || { t: st.outsideTemp };
+      const t = inf.t;
+      const ok = t >= comfort - 0.5, near = t >= comfort - 2, hot = t > comfort + 3.5;
+      let fill, solid;
+      if (heatView === 'status') {
+        solid = hot ? 'oklch(0.62 0.17 30)' : ok ? 'oklch(0.65 0.14 150)' : near ? 'oklch(0.72 0.13 80)' : 'oklch(0.62 0.12 250)';
+        fill = solid.replace(')', ' / 0.4)');
+      } else {
+        fill = this.tempColor(t, 0.42);
+        solid = this.tempColor(t, 0.95);
+      }
+      const isSel = st.selected === rm.id;
+      return {
+        id: rm.id, name: rm.name,
+        tempStr: t.toFixed(1) + '°',
+        srcStr: (rm.sources && rm.sources.length)
+          ? rm.sources.map(s => (this.SRC[s.type] || { abbr: '?' }).abbr + ' ' + s.power.toFixed(1)).join(' · ')
+          : 'no heating',
+        left: rm.x * S, top: rm.y * S, width: rm.w * S, height: rm.h * S,
+        fill,
+        border: isSel ? '2px solid #2b5fc7' : '1.5px solid ' + solid,
+        shadow: isSel ? '0 0 0 3px rgba(43,95,199,0.25)' : 'none',
+        selected: isSel,
+        walls: is3 ? this.wallsFor(rm, floor.rooms.filter(o => o.id !== rm.id)) : [],
+        onDown: (e) => this.startDrag(e, rm, 'move'),
+        onResizeDown: (e) => this.startDrag(e, rm, 'resize')
+      };
+    });
+
+    const floorTabs = st.floors.map((f, i) => ({
+      name: f.name,
+      bg: i === fi ? '#1b2330' : '#f1f3f6',
+      color: i === fi ? '#ffffff' : '#3a4657',
+      bc: i === fi ? '#1b2330' : '#dde1e7',
+      closable: st.floors.length > 1,
+      onClick: () => this.setState({ activeFloor: i, selected: null }),
+      onClose: (e) => { e.stopPropagation(); this.removeFloor(i); }
+    }));
+
+    const presets = [-10, 0, 10].map(v => ({
+      label: (v > 0 ? '+' : '') + v + '°',
+      bg: st.outsideTemp === v ? '#e6edfb' : '#ffffff',
+      bc: st.outsideTemp === v ? '#2b5fc7' : '#dde1e7',
+      color: st.outsideTemp === v ? '#2b5fc7' : '#4a5568',
+      onClick: () => this.setState({ outsideTemp: v })
+    }));
+
+    const allRooms = [];
+    st.floors.forEach((f) => f.rooms.forEach(r => allRooms.push({ r, f })));
+    const okCount = allRooms.filter(x => { const y = temps.get(x.r.id); return y && y.t >= comfort - 0.5; }).length;
+    const allOk = okCount === allRooms.length && allRooms.length > 0;
+    const sum = {
+      text: okCount + '/' + allRooms.length + ' rooms warm',
+      bg: allOk ? 'oklch(0.93 0.05 150)' : 'oklch(0.93 0.06 70)',
+      color: allOk ? 'oklch(0.42 0.1 150)' : 'oklch(0.45 0.1 60)'
+    };
+
+    const coldRooms = allRooms
+      .map(x => ({ ...x, inf: temps.get(x.r.id) }))
+      .filter(x => x.inf && x.inf.t < comfort - 0.5)
+      .map(x => ({
+        name: x.r.name, floorName: '· ' + x.f.name,
+        tempStr: x.inf.t.toFixed(1) + '°',
+        needStr: '+' + Math.max(0.1, (comfort - x.inf.t) * x.inf.G / 1000).toFixed(1) + ' kW'
+      }));
+
+    const totalKw = allRooms.reduce((s, x) => s + (x.r.sources || []).reduce((a, b) => a + b.power, 0), 0);
+
+    let selV = { name: '', onName: null, dims: '', tempStr: '', tempColor: '#000', statusText: '', statusColor: '#000' };
+    if (sel) {
+      const inf = temps.get(sel.id) || { t: st.outsideTemp, G: 1 };
+      const t = inf.t;
+      const ok = t >= comfort - 0.5, hot = t > comfort + 3.5;
+      const need = Math.max(0.1, (comfort - t) * inf.G / 1000).toFixed(1);
+      selV = {
+        name: sel.name,
+        onName: (e) => this.updateRoom(sel.id, { name: e.target.value }),
+        dims: sel.w.toFixed(1) + ' × ' + sel.h.toFixed(1) + ' m · ' + (sel.w * sel.h).toFixed(1) + ' m²',
+        tempStr: t.toFixed(1) + '°C',
+        tempColor: this.tempColor(t, 1, true),
+        statusText: hot ? 'Overheating — reduce power' : ok ? 'Comfortable' : 'Too cold — add ≈ ' + need + ' kW',
+        statusColor: hot ? '#c04747' : ok ? '#3d7a55' : '#3f6fd0'
+      };
+    }
+
+    const insBtns = sel ? ['poor', 'average', 'good'].map(k => ({
+      label: this.INS[k].label,
+      bg: sel.insulation === k ? '#1b2330' : '#ffffff',
+      color: sel.insulation === k ? '#ffffff' : '#3a4657',
+      bc: sel.insulation === k ? '#1b2330' : '#dde1e7',
+      onClick: () => this.updateRoom(sel.id, { insulation: k })
+    })) : [];
+
+    const selSources = sel ? (sel.sources || []).map(s => {
+      const m = this.SRC[s.type] || this.SRC.electric;
+      return {
+        label: m.label, min: m.min, max: m.max, val: s.power, valStr: s.power.toFixed(1),
+        onChange: (e) => {
+          const v = parseFloat(e.target.value);
+          this.updateRoom(sel.id, r => ({ sources: r.sources.map(x => x.id === s.id ? { ...x, power: v } : x) }));
+        },
+        onRemove: () => this.updateRoom(sel.id, r => ({ sources: r.sources.filter(x => x.id !== s.id) }))
+      };
+    }) : [];
+
+    const addBtns = Object.keys(this.SRC).map(k => ({
+      label: this.SRC[k].label,
+      onClick: () => {
+        if (!sel) return;
+        this.updateRoom(sel.id, r => ({ sources: [...(r.sources || []), { id: this.uid(), type: k, power: this.SRC[k].def }] }));
+      }
+    }));
+
+    const stairSel = (floor.stairs || []).find(t => t.id === st.selected) || null;
+    const stairsV = (floor.stairs || []).map(t => {
+      const isSel = st.selected === t.id;
+      const vert = t.h >= t.w;
+      return {
+        left: t.x * S, top: t.y * S, width: t.w * S, height: t.h * S,
+        bg: 'repeating-linear-gradient(' + (vert ? '180deg' : '90deg') + ', #cdd4de 0px, #cdd4de 5px, #f0f3f7 5px, #f0f3f7 13px)',
+        border: isSel ? '2px solid #2b5fc7' : '1.5px solid #9aa5b5',
+        shadow: isSel ? '0 0 0 3px rgba(43,95,199,0.25)' : 'none',
+        lift: is3 ? 'translateZ(2px)' : 'none',
+        selected: isSel,
+        onDown: (e) => this.startDrag(e, t, 'move', 'stair'),
+        onResizeDown: (e) => this.startDrag(e, t, 'resize', 'stair')
+      };
+    });
+
+    let stairInfo = '';
+    if (stairSel) {
+      if (fi >= st.floors.length - 1) {
+        stairInfo = 'There is no floor above this one, so these stairs don\u2019t connect anywhere yet.';
+      } else {
+        const aboveNames = st.floors[fi + 1].rooms
+          .filter(r => this.ov(stairSel.x, stairSel.w, r.x, r.w) * this.ov(stairSel.y, stairSel.h, r.y, r.h) > 0.2)
+          .map(r => r.name);
+        stairInfo = aboveNames.length
+          ? 'Open stairwell \u2014 warm air rises into ' + aboveNames.join(', ') + ' on ' + st.floors[fi + 1].name + '.'
+          : 'No room on ' + st.floors[fi + 1].name + ' overlaps these stairs, so no heat flows through them. Move a room above them to connect.';
+      }
+    }
+
+    const viewBtns = ['2d', '3d'].map(v => ({
+      label: v.toUpperCase(),
+      bg: view === v ? '#1b2330' : '#ffffff',
+      color: view === v ? '#ffffff' : '#3a4657',
+      onClick: () => this.setState({ view: v })
+    }));
+
+    return {
+      rooms, floorTabs, presets, sum, coldRooms,
+      viewBtns,
+      worldXform: is3 ? 'scale(0.82) rotateX(55deg) rotateZ(-45deg)' : 'none',
+      labelXform: is3 ? 'translateZ(26px) rotateZ(45deg) rotateX(-55deg)' : '',
+      labelBg: is3 ? 'rgba(255,255,255,0.65)' : 'transparent',
+      hasCold: coldRooms.length > 0,
+      allWarm: allOk,
+      stairsV, hasStairSel: !!stairSel, stairInfo,
+      stairDims: stairSel ? stairSel.w.toFixed(1) + ' × ' + stairSel.h.toFixed(1) + ' m' : '',
+      addStairs: () => this.addStairs(),
+      deleteStair: () => {
+        if (!stairSel) return;
+        this.setState(s => ({ selected: null, floors: s.floors.map(f => ({ ...f, stairs: (f.stairs || []).filter(t => t.id !== stairSel.id) })) }));
+      },
+      hasSel: !!sel, noSel: !sel && !stairSel,
+      sel: selV, insBtns,
+      selWin: String(sel ? (sel.windows || 0) : 0),
+      selSources, selNoSources: !!sel && selSources.length === 0,
+      addBtns,
+      ui: { outsideTemp: st.outsideTemp, comfort: st.comfort },
+      outsideStr: (st.outsideTemp > 0 ? '+' : '') + st.outsideTemp + '°C',
+      comfortStr: (comfort % 1 === 0 ? comfort.toFixed(0) : comfort.toFixed(1)) + '°C',
+      gridOpacity: (this.props.showGrid ?? true) ? 1 : 0,
+      houseRooms: String(allRooms.length),
+      housePower: totalKw.toFixed(1) + ' kW',
+      houseOk: okCount + ' of ' + allRooms.length,
+      onOutside: (e) => this.setState({ outsideTemp: parseInt(e.target.value, 10) }),
+      onComfort: (e) => this.setState({ comfort: parseFloat(e.target.value) }),
+      deselect: (e) => { if (e.target === e.currentTarget) this.setState({ selected: null }); },
+      addRoom: () => this.addRoom(),
+      addFloor: () => this.addFloor(),
+      deleteRoom: () => {
+        if (!sel) return;
+        this.setState(s => ({ selected: null, floors: s.floors.map(f => ({ ...f, rooms: f.rooms.filter(r => r.id !== sel.id) })) }));
+      },
+      onWinMinus: () => { if (sel) this.updateRoom(sel.id, r => ({ windows: Math.max(0, (r.windows || 0) - 1) })); },
+      onWinPlus: () => { if (sel) this.updateRoom(sel.id, r => ({ windows: Math.min(8, (r.windows || 0) + 1) })); }
+    };
+  }
+}
+</script>
+</body>
+</html>
