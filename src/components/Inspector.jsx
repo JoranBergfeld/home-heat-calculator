@@ -79,7 +79,7 @@ export default function Inspector({ state, actions, temps, summary }) {
   if (stairSel) {
     let stairInfo
     if (fi >= state.floors.length - 1) {
-      stairInfo = 'There is no floor above this one, so these stairs don't connect anywhere yet.'
+      stairInfo = 'There is no floor above this one, so these stairs don’t connect anywhere yet.'
     } else {
       const aboveNames = state.floors[fi + 1].rooms
         .filter((r) => ov(stairSel.x, stairSel.w, r.x, r.w) * ov(stairSel.y, stairSel.h, r.y, r.h) > 0.2)
